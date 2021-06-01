@@ -7,11 +7,25 @@ module ContextError (
     )where
 
 import Control.Monad.Error
+import Control.Applicative (Applicative(..))
+import Control.Monad
+import Control.Monad.Trans
+import Control.Monad.State
 
 class (MonadError e m) => ContextError c e m | m -> e, m -> c where
     withContext :: c -> m a -> m a
 
 newtype CE m a = CE {unCE :: m a} deriving (Monad)
+
+
+instance (Monad m) => Applicative (CE m) where
+    pure = return
+    (<*>) = ap
+
+instance (Monad m) => Functor (CE m) where
+    fmap = liftM
+
+
 
 instance (MonadPlus mp, MonadError (mp c, e) m) => MonadError e (CE m) where
     throwError e = CE $ throwError (mzero, e)
@@ -38,3 +52,4 @@ test3 = unCE . test2
 
 test4 :: Int -> String
 test4 x = either show show $ (test3 x :: Either (Maybe String, String) Int)
+
